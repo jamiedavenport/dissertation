@@ -1,0 +1,282 @@
+\documentclass[12pt, a4]{article}
+
+\parindent 0pt
+\parskip 6pt
+
+\begin{document}
+
+% My Details
+\rightline{\large{Jamie Davenport}}
+\medskip
+\rightline{\large{Trinity}}
+\medskip
+\rightline{\large{jd726}}
+
+% Cover Page
+
+\vfil
+
+\centerline{\large Diploma in Computer Science Project Proposal}
+\vspace{0.4in}
+\centerline{\Large\bf Generational Garbage Collector for C}
+\vspace{0.3in}
+\centerline{October 18, 2017}
+
+\vfil
+
+{\bf Project Originator:} Dr. Timothy Jones
+
+\vspace{0.5in}
+
+{\bf Project Supervisor:} Dr. Timothy Jones
+
+\vspace{0.5in}
+
+{\bf Director of Studies:} Dr. Sean Holden
+
+\vspace{0.5in}
+
+{\bf Overseers:} Dr. Richard Mortier and Dr. Andrew Rice
+
+\vfil
+\eject
+
+% Main Document
+
+\section*{Introduction and Description of the Work}
+% Describe memory management
+The C programming language gives the programmer total control over memory management via the functions malloc, realloc, calloc and free. This means that the programmer is fully responsible for allocating and freeing memory. The programmer has full control but reasoning about when to free memory is sometimes difficult and forgetting to free memory can lead to memory leaks.
+
+% Describe what GC
+Garbage collection automates the process of memory allocation. The garbage collector will free memory that is no longer accessible by the program. This allows the programmer to forget about the details of memory management without the worry of memory leaks. The major drawback of garbage collectors is that they have a performance overhead and require their own memory resources. This is unacceptable for some programs such as games where the drop in frame rate during garbage collection would be noticeable.
+
+% Generational Garbage Collection
+Generational garbage collection uses the idea that 80\%-98\% of objects die quickly, and so an object which has survived multiple garbage collections has a high chance of being a long-lived object. We can improve performance by checking older objects less frequently than younger ones. 
+
+% Application to C programs
+Throughout the project it will be interesting to evaluate how useful generational garbage collection is when compared to manual memory management and other types of garbage collection. Many general C programs may choose to handle short-lived objects with stack allocation, and if it is the case then what kind of programs are most suited to generational garbage collection.
+
+\section*{Resources Required}
+
+The project will be programmed in C. I will use CLion as my development environment which provides build tools using CMake and LLDB for debugging.
+
+I will use Git as version control and push to Bitbucket every day as my primary backup. Also once a week I will backup my code to a memory pen.
+
+I plan to use my own computer which is a Macbook Pro with the following specifications:
+
+\begin{itemize}
+
+	\item Processor: 2.5 GHz Intel Core i7
+	\item Memory: 16 GB 1600 MHz DDR3
+
+\end{itemize}
+
+I accept full responsibility for this machine and I have made contingency plans to protect myself against hardware and/or software failure.
+
+In the event it should fail I will restore my code to another Macbook pro of the same specifications, and failing that the MCS machines.
+
+\section*{Starting Point}
+I already have knowledge of C and garbage collection algorithms from previous courses.
+
+I have also looked at the Boehm Mark and Sweep Garbage Collector \footnote{http://www.hboehm.info/gc/} for inspiration on how to make my garbage collector.
+
+\section*{Substance and Structure of the Project}
+
+The aim of this project is to produce a stop-the-world generational garbage collector for C. The collector will be designed to be conservative meaning it may miss some garbage but should never collect an object which is still live.
+
+\subsection*{Memory Allocation}
+The garbage collection library will expose functions to allocate memory. These functions will allocate memory on the heap using stdlib functions such as malloc and realloc. Extra information about the memory will be stored in a data structure on the heap which is used for garbage collection.
+
+\subsection*{Collection}
+Garbage collection runs when the number of objects in a generation passes some threshold. Younger generations are collected more frequently than older ones. Garbage collection stats are also stored on the heap to determine at each pass which generation is to be collected.
+
+We start from the root set and follow pointers to objects which are in the generation we are concerned with (and younger generations). The collector doesn't follow pointers to objects in other generations. Every reachable object in the generation is promoted (with the oldest objects simply being left) and other objects are collected.
+
+The root set consists of the stack, registers and the global data section. We can get pointers to the stack and registers in a platform-dependant way by executing assembly code. Similarly, the global data section pointers are defined as external variables and made accessible by a linker script file.
+
+Searching the stack for pointers will use the assumption that pointers are on aligned memory. Using this assumption we can search the stack for pointers which are managed by the garbage collector. We will store the address and size of each managed object which will be used to determine which objects are being pointed to and to find what pointers the object contains.
+
+\subsection*{Cross-Generation Pointers}
+When we are collecting a generation we will follow pointers from the root set to objects in that generation or younger. In the case that an object is still accessible via pointers between objects in different generations we need to ensure that this object isn't collected. To do this we need to keep track of all older objects which have pointers to younger objects and include them in the root set. Another problem is that if a pointer between an older object to a younger one is removed and the garbage collector hasn't noticed the change (due to the algorithm design) then it could result in garbage not being collected.
+
+The project has the following main sections:
+
+\begin{enumerate}
+
+	\item Study garbage collection algorithms and data structures. Generational garbage collection algorithms are mostly well documented, however parts will need to be designed from scratch to ensure that we never collect a live object. In particular, how to handle cross generational pointers will need to be thought about carefully.
+
+	\item Become familiar with the target platform and x86 assembly language. This knowledge will be used to find the root set for each platform as the names of registers are platform dependant.
+	
+	\item Develop the garbage collector and test it. I will first setup the project and construct the interface. I will write the header files which will get the stack pointer and registers for each of the target platforms. Then I can develop the actual garbage collection including allocation, searching the root set and collecting memory.
+	
+	\item Evaluate against the success criteria. Collate the evidence to be used in the dissertation which demonstrates that the garbage collector works as intended.
+	
+	\item Write the dissertation.
+
+\end{enumerate}
+
+\section*{Success Criteria}
+
+\begin{enumerate}
+	
+	\item Produce a garbage collector which never collects a live object.
+	
+	\item The garbage collector should run when when the number of objects in a generation passes a threshold or when malloc returns NULL indicating that there isn't enough space on the heap.
+	
+	\item It should collect at least 90\% of garbage each time it is run.
+	
+\end{enumerate}
+
+The success criteria can be evaluated by running the garbage collector against test suites. These tests should include complex cases for example where old objects point to younger ones and vice versa. Two possible benchmark suites are Cbench\footnote{http://ctuning.org/cbench} and SPEC CPU 2006\footnote{https://www.spec.org/cpu2006/CINT2006/}. However one problem with these may be that the programs have short running times or don't create enough heap objects, I will allow for extra time in my timetable for writing my own tests if this is the case.
+
+\subsection*{Bonus Criteria}
+
+These are goals which are desirable but are not necessary for a successful project.
+
+\begin{enumerate}
+
+\item For situations where the assumption that 80\% to 98\% of objects die young holds, it should have better collection performance than a mark and sweep algorithm. Determined by comparing with the Boehm Mark and Sweep GC.
+
+\end{enumerate}
+
+\section*{Timetable and Milestones}
+
+\subsection*{21/10/17 - 3/11/17}
+
+Study and design the algorithms and data structures.
+
+Discuss this with supervisor.
+
+Setup interface and header files including platform specific code to get stack pointers and registers.
+
+{\bf Milestones:} Have designs for the algorithms and data structures. Also have complete header files ready for implementation.
+
+\subsection*{4/11/17 - 17/11/17}
+
+Setup testing framework.
+
+Garbage collection initialisation including creation of data structures that will hold object information and collection stats.
+
+{\bf Milestones:} Setup data structures ready for allocation and garbage collection. Be able to write unit tests.
+
+\subsection*{18/11/17 - 24/11/17}
+
+Start writing memory allocation functions. These functions will allocate memory using stdlib functions and also store the objects address and size.
+
+Write unit tests for these functions.
+
+{\bf Milestones:} Completed unit tests.
+
+\subsection*{25/11/17 - 8/12/17 (Christmas Vacation)}
+
+Complete memory allocation functions.
+
+Michaelmas term ends on 1/12/17.
+
+{\bf Milestones:} Have allocation functions which pass the unit tests.
+
+\subsection*{9/12/17 - 22/12/17 (Christmas Vacation)}
+
+Write code to find pointers from the root set. Check if the pointers are managed by the garbage collector.
+
+Continue writing unit tests.
+
+{\bf Milestones:} Be able to follow pointers from the root set to objects in the heap.
+
+\subsection*{23/12/17 - 5/1/18 (Christmas Vacation)}
+
+Write code to collect garbage and unit tests for the functions. 
+
+The code should follow pointers to objects, promote reachable objects and free garbage.
+
+At this point it should be possible to evaluate whether the garbage collector runs when it is supposed to.
+
+{\bf Milestones:} Be able to collect garbage in simple cases. Not yet able to deal with pointers from older generations to younger ones.
+
+\subsection*{6/1/18 - 12/1/18 (Christmas Vacation)}
+
+Deal with cross-generation pointers by including older objects with pointers to younger ones in the root set.
+
+At this point it should be possible to evaluate success criteria 1 and 2 which ensure that it collects the right amount of garbage and never a live object.
+
+{\bf Milestones:} Be able to handle cross-generation pointers. At this point the garbage collector should never collect a live object.
+
+\subsection*{13/1/18 - 26/1/18 (Christmas Vacation)}
+
+Testing and debugging.
+
+Lent term starts on 16/1/18.
+
+{\bf Milestones:} Have a working garbage collector.
+
+\subsection*{27/1/18 - 2/2/18}
+
+Write progress report.
+
+{\bf Milestones:} Submit progress report before the deadline (2/2/18)
+
+\subsection*{3/2/18 - 16/2/18}
+
+Evaluate the whole project and gather evidence.
+
+This will be done by running the garbage collector on test suites and the evidence will be the results of the tests.
+
+If the test suites are not suitable for evaluation for whatever reason then this time will be used to write my own tests and use them.
+
+{\bf Milestones:} Have evidence of meeting the success criteria for use in the dissertation.
+
+\subsection*{17/2/18 - 2/3/18}
+
+Setup dissertation document and write introduction and preparation sections.
+
+{\bf Milestones:} Have started the dissertation write up and completed the introduction and preparation.
+
+\subsection*{3/3/18 - 16/3/18}
+
+{\bf Milestones:} Write up implementation section.
+
+\subsection*{17/3/18 - 6/4/18 (Easter Vacation)}
+
+Lent term ends on 16/3/18.
+
+{\bf Milestones:} Write up evaluation section.
+
+\subsection*{7/4/18 - 20/4/18 (Easter Vacation)}
+
+{\bf Milestones:} Write up conclusion.
+
+\subsection*{21/4/18 - 4/5/18 (Easter Vacation)}
+
+Proof-read dissertation by peers and/or supervisor.
+
+Review whole project.
+
+Easter term starts on 24/4/18.
+
+{\bf Milestones:} Have a completed dissertation.
+
+\subsection*{5/5/18 - 17/5/18}
+
+Extra time to finish any left over work.
+
+\subsection*{18/5/18}
+
+Dissertation deadline.
+
+\section*{Possible Extensions}
+
+These are things which can be implemented if the main goals are completed ahead of schedule.
+
+\begin{enumerate}
+
+	\item Make the collector work with multi-threaded applications. This would use locks to stop all running threads so that the garbage collector can run. One issue would be finding the root set of all the threads.
+	
+	\item Extend the collector to work with more platforms. This would involve configuring header files to get the registers and stack pointer using the appropriate assembly code. It also requires testing on the target platforms.
+	
+	\item Add a C++ layer which overwrites the global new and delete operators. One problem here is that this is not well standardised and therefore might not work on every platform.
+	
+	\item Improve the collector performance. By changing the algorithm or data structures improve the performance and try to achieve the bonus criteria.
+
+\end{enumerate}
+
+\end{document}

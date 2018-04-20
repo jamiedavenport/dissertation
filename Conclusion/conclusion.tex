@@ -1,0 +1,29 @@
+\documentclass[../diss.tex]{subfiles}
+
+\begin{document}
+
+In this dissertation, I have described the preparation, implementation and evaluation in the development of my generational garbage collector. This project appealed to me because of its relation to programming languages and compilers. I had the opportunity to learn about garbage collection in depth and work with new tools which I had not previously known about. Carrying out this project has increased my interest in the field and I will continue to pursue this interest.
+
+\section{Results}
+
+As discussed in \cref{sec:overallresults}, the project has met all of the success criteria and I have implemented an extension. I have designed unit tests and benchmarks that allow me to show how my garbage collector works. 
+
+In addition to developing a successful garbage collector, I have also progressed as a result of the project. This has given me more experience working in C, especially with tools I otherwise would not have known about such as Valgrind. I have learned a lot about operating systems such as virtual memory, traps and multi-threading.
+
+\section{Lessons Learnt}
+
+Initially, adding garbage collection to manual memory managed language like C seemed unusual to me. I was not only unsure about the technical aspects of this but also why someone would want to do this. This highlighted to me the importance of an extensive planning period. While diving head first into programming is often the desire, if I had done this then the project would have found itself in difficulty. I have realised why adding garbage collection in this way can be useful, especially when working in teams with different backgrounds and experience.
+
+\section{Future Work} \label{sec:futurework}
+
+While I have achieved many things with the garbage collector, there is always more that can be done to improve software like this. Some additions to the project are listed below but there are many others which can be done. I plan to release the garbage collector as open-source software on GitHub with an MIT license. The reasons behind this are that programmers in the community can make changes to this to make it work on other platforms and the goal is that by exploiting platform-specific behaviours we can get the best performance from it.
+
+\begin{itemize}
+    \item Add support for alternative platforms.
+    \item Include global roots in the root set.
+    \item Performance improvements, perhaps by exploiting platform-specific features or by implementing alternative data-structures and algorithms.
+    \item Add a C++ extension to the garbage collector so that it works with the `new' keyword.
+    \item Make the Allocator module and other data-structures thread-safe. This would allow for more fine-grained locking to be applied which should improve the performance of multi-threaded applications.
+\end{itemize}
+
+\end{document}
