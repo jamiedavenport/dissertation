@@ -82,7 +82,7 @@ Name:               & \bf Jamie Davenport                       \\
 College:            & \bf Trinity College                     \\
 Project Title:      & \bf Generational Garbage Collection in C \\
 Examination:        & \bf Computer Science Tripos -- Part II, July 2018  \\
-Approx. Word Count:         & \bf 11,623  \\
+Approx. Word Count:         & \bf 11,653  \\
 Project Originator: & Dr Timothy Jones                    \\
 Supervisor:         & Dr Timothy Jones                    \\ 
 \end{tabular}
@@ -157,26 +157,273 @@ I would like to thank Dr.~Timothy Jones for supervising this project and for alw
 % the appendices
 \appendix
 
-%\chapter{Latex source}
-
-%\section{diss.tex}
-%{\scriptsize\verbatiminput{diss.tex}}
-
-%\section{proposal.tex}
-%{\scriptsize\verbatiminput{proposal.tex}}
-
-%\chapter{Makefile}
-
-%\section{makefile}\label{makefile}
-%{\scriptsize\verbatiminput{makefile.txt}}
-
-%\section{refs.bib}
-%{\scriptsize\verbatiminput{refs.bib}}
-
 
 \chapter{Project Proposal}
 \label{appendix:initialproposal}
-
 \input{proposal}
+
+% Evaluation Appendix
+\chapter{Evaluation Code}
+\label{appendix:evaluation}
+
+Here I will provide some of the code used as part of the evaluation including benchmark code, unit tests and Matlab scripts.
+
+\section{Benchmark Code}
+
+Listings \ref{lst:benchfibcode} and \ref{lst:benchtreescode} show the source code for both benchmarks, they include header files which contain the function declarations. These functions are used to construct the single and multi-threaded benchmarks which are presented in the evaluation. The garbage collector can be disabled by commenting out the include statement, by doing this it will use manual memory management.
+
+\begin{figure*}
+\begin{lstlisting}[language=C, caption=Fibonacci benchmark source code, label={lst:benchfibcode}]
+#include <gc.h>
+#include "fib.h"
+
+#ifdef GC_H
+#define malloc(n) GC_malloc_atomic(n)
+#else
+#include <stdlib.h>
+#endif
+
+int *fib (int n) {
+
+    int *res = malloc(sizeof(int));
+
+    if (n == 0 || n == 1 || n == 2) *res = 1;
+    else {
+        int *a = fib(n-1);
+        int *b = fib(n-2);
+        *res = *a + *b;
+
+#ifndef GC_H
+        free(a);
+        free(b);
+#endif
+    }
+
+    return res;
+
+}
+\end{lstlisting}
+\end{figure*}
+
+\begin{figure*}
+\begin{lstlisting}[language=C, caption=Trees benchmark source code, label={lst:benchtreescode}]
+#include <gc.h>
+#include "trees.h"
+
+#ifdef GC_H
+#define malloc(n) GC_malloc(n)
+#else
+#include <stdlib.h>
+#endif
+
+tree_t *generate_tree(int height) {
+
+    // Used to label the nodes
+    static int i = 0;
+
+    if (height == 0) return NULL;
+
+    // Create a new tree node
+    tree_t *node = (tree_t *) malloc(sizeof(tree_t));
+    node->i = i++;
+
+    node->l = generate_tree(height-1);
+    node->r = generate_tree(height-1);
+
+    return node;
+
+}
+
+int count_nodes (tree_t *node) {
+
+    if (!node) return 0;
+
+    return 1 + count_nodes(node->l) + count_nodes(node->r);
+
+}
+\end{lstlisting}
+\end{figure*}
+
+\section{Unit Tests}
+
+Listing \ref{lst:benchunittests} shows the unit tests for the benchmarks. The Fibonacci unit test uses an array of pre-computed results that are used to check the results of the \emph{fib} function. For both the amount of tests applied can be changed using the associated macros. This can be set to a low value to speed up the overall test execution.
+
+\begin{figure*}
+\begin{lstlisting}[language=C, caption=Benchmark unit tests, label={lst:benchunittests}]
+#include "catch.hpp"
+
+extern "C"{
+#include "fib.h"
+#include "trees.h"
+#include "gc.h"
+}
+
+#define FIB_TESTS_TO_RUN 10
+#define TREE_TESTS_TO_RUN 10
+
+TEST_CASE("Fib benchmark works correctly", "[bench]") {
+
+    GC_reset();
+
+    int fibResults[] = {1, 1, 2, 3, 5, 8, 13, 21, 
+                        34, 55, 89, 144, 233, 377, 610, 987,
+                        1597, 2584, 4181, 6765, 10946, 
+                        17711, 28657, 46368, 75025, 121393,
+                        196418, 317811, 514229, 832040};
+
+    for (int i = 1; i < FIB_TESTS_TO_RUN; i++) {
+        int *res = fib(i);
+        REQUIRE(*res == fibResults[i-1]);
+    }
+
+}
+
+TEST_CASE("Trees benchmark works correctly", "[bench]") {
+
+    GC_reset();
+
+    for (int i = 1; i < TREE_TESTS_TO_RUN; i++) {
+        REQUIRE(count_nodes(generate_tree(i)) == (2 << (i - 1)) - 1);
+    }
+
+}
+\end{lstlisting}
+\end{figure*}
+
+\section{Matlab Scripts}
+
+Listings \ref{lst:loggeroutputgraph}, \ref{lst:fibbenchthresh} and \ref{lst:treesbenchthresh} are the Matlab scripts used to produce the output. The $y$ and $err$ values in listings \ref{lst:fibbenchthresh} and \ref{lst:treesbenchthresh} are computed in a separate spreadsheet from the raw values recorded.
+
+\begin{figure*}
+\begin{lstlisting}[language=Matlab, caption=The script used to produce graphs from the Logger output, label={lst:loggeroutputgraph}]
+%% Import data from text file.
+
+%% Initialize variables.
+filename = './gc_stats.txt';
+delimiter = ',';
+startRow = 2;
+
+%% Format for each line of text:
+formatSpec = '%f%f%[^\n\r]';
+
+%% Open the text file.
+fileID = fopen(filename,'r');
+
+%% Read columns of data according to the format.
+dataArray = textscan(fileID, formatSpec, 'Delimiter', delimiter, 'TextType', 
+                    'string', 'EmptyValue', NaN, 'HeaderLines' ,startRow-1, 
+                    'ReturnOnError', false, 'EndOfLine', '\r\n');
+
+%% Close the text file.
+fclose(fileID);
+
+%% Allocate imported array to column variable names
+Allocations = dataArray{:, 1};
+LiveObjects = dataArray{:, 2};
+
+plot(Allocations, LiveObjects);
+
+%% Clear temporary variables
+clearvars filename delimiter startRow formatSpec fileID dataArray ans;
+\end{lstlisting}
+\end{figure*}
+
+\begin{figure*}
+\begin{lstlisting}[language=Matlab, caption=Matlab script for Fib runtime graph w.r.t. threshold, label={lst:fibbenchthresh}]
+x = [500:500:5000];
+
+y = [0.01632733333
+0.015619
+0.015646
+0.015143
+0.01572333333
+0.01558966667
+0.01515866667
+0.015894
+0.01719966667
+0.015816];
+
+err = [0.0003885876135
+0.0002950203383
+0.0003158908039
+0.0003553491241
+0.0001730327522
+0.0002730299129
+0.0006468209438
+0.0003030165012
+0.0003374971605
+0.0007603229577];
+
+% Convert to ms
+y = y * 1000;
+err = err * 1000;
+
+hold on
+bar(x, y);
+errorbar(x, y, err, '.');
+
+xticks(x);
+
+xlabel('Threshold');
+ylabel('Runtime (ms)');
+title('A graph showing how the runtime of 
+Fib_1(20) varies with threshold');
+\end{lstlisting}
+\end{figure*}
+
+\begin{figure*}
+\begin{lstlisting}[language=Matlab, caption=Matlab script for Trees runtime graph w.r.t. threshold, label={lst:treesbenchthresh}]
+x = [500:500:8000];
+
+y = [2.123795
+1.133964
+0.823391
+0.6787766667
+0.6028463333
+0.531144
+0.5158316667
+0.4794876667
+0.4338626667
+0.4252213333
+0.3953496667
+0.3897146667
+0.3984053333
+0.3919336667
+0.3604973333
+0.3699083333];
+
+err = [0.02497760799
+0.004898422603
+0.02134944721
+0.007703439578
+0.007845491975
+0.009119623183
+0.02253381131
+0.002621365547
+0.001540925155
+0.01136815299
+0.004077139357
+0.007320281438
+0.009583418614
+0.004111857285
+0.00335811589
+0.01252440084];
+
+% Convert to ms
+y = y * 1000;
+err = err * 1000;
+
+hold on
+bar(x, y);
+errorbar(x, y, err, '.');
+
+xticks(x);
+
+xlabel('Threshold');
+ylabel('Runtime (ms)');
+title('A graph showing how the runtime of 
+Trees_1(16) varies with threshold');
+\end{lstlisting}
+\end{figure*}
 
 \end{document}
