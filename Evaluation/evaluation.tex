@@ -1,17 +1,14 @@
 \documentclass[../diss.tex]{subfiles}
 
-% Put this somewhere in the evaluation
-%While the generational algorithm claims to improve performance over a standard mark and sweep algorithm (given some assumptions about the data hold) I will not be comparing against the Boehm garbage collector for performance, the reasoning behind this is that their solution is a more mature piece of software with many platform-specific enhancements which would be hard to convincingly beat in the given timescale.
-
 \begin{document}
 
-This chapter shows that the implementation works as intended through the use of unit tests and custom benchmarks. These benchmarks have been designed to stress the garbage collector in an attempt to expose any faults in the implementation. We will see that unit testing was employed to test each component in isolation before seeing the benchmarks which test the garbage collector as a whole unit. Finally, the performance of the garbage collector is discussed which leads to ideas about future work or alternative design patterns for C programs.
+This chapter shows that the implementation works as intended through the use of unit tests and custom benchmarks. These benchmarks have been designed to stress the garbage collector in an attempt to expose any faults in the implementation. We will see that unit testing was employed to test each component in isolation before seeing the benchmarks which test the garbage collector as a whole unit. Finally, the performance of the garbage collector is discussed which leads to ideas about future work or alternative design patterns for C programs. I will not be comparing the performance against the Boehm garbage collector, the reasoning behind this is that their solution is a more mature piece of software with many platform-specific enhancements which would be hard to convicingly beat in the given timescale.
 
 \section{Overall Results} \label{sec:overallresults}
 
 % Talk about when the requirements were met and the evidence of it
 
-The success criteria were first outlined in the project proposal (Appendix X). In the requirements analysis (\cref{sec:requirements}) these were refined into smaller objectives such that an implementation achieving these would also meet the main success criteria.
+The success criteria were first outlined in the project proposal (Appendix \ref{appendix:initialproposal}). In the requirements analysis (\cref{sec:requirements}) these were refined into smaller objectives such that an implementation achieving these would also meet the main success criteria.
 
 \begin{enumerate}
     \item Produce a garbage collector which never collects a live object.

@@ -15,7 +15,7 @@ This chapter will explore how the design and requirements from the previous chap
 \section{Structure \& Interface}
 \label{sec:structureandinterface}
 
-In this section I will discuss the structure of the project, give a high-level overview of the garbage collector and the interface to the garbage collector library.
+In this section I will discuss the structure of the project, give a high-level overview of the garbage collector and the interface to the library.
 
 \subsection{Directory Structure}
 
@@ -71,7 +71,7 @@ void GC_reset (void);
 \subsubsection{GC\_init}
 This function initialises the garbage collector and as such should be called first from the main function of the user program. It also must initialise any modules which it uses such as the Allocator and Threads modules. \emph{GC\_init} makes a call to \emph{GC\_manage\_thread} to add the main thread as being managed. 
 
-A subtlety with this function is that it uses \emph{\_\_builtin\_frame\_address} to find one endpoint of the stack. This function is compiler specific but it is defined for both GCC and Clang/LLVM compilers. So any pointers in the main function's stack frame will not be found by the garbage collector. The solution is to defer the actual work of main to another function and in main only call \emph{GC\_init} and the deferred main as in Listing \ref{lst:stackframeproblem}. An example of the problem and solution can be seen in Figure \ref{fig:stackproblem}.
+A subtlety with this function is that it uses \emph{\_\_builtin\_frame\_address} to find one endpoint of the stack. This function is compiler specific but it is defined for both GCC and Clang/LLVM compilers. So any pointers in the main function's stack frame will not be found by the garbage collector. The solution is to defer the actual work of main to another function and in main only call \emph{GC\_init} and the deferred main. An example of the problem and solution can be seen in Figure \ref{fig:stackproblem}.
 
 \begin{figure}
     \centering
@@ -197,7 +197,7 @@ typedef struct {
 
 \subsection{Red-Black Trees} \label{sec:rbtree}
 
-The garbage collector makes use of a red-black tree implementation to store pointers to all managed objects. It is used to determine whether a given pointer is pointing to an object managed by the garbage collector. We have two problems that need addressing: searching for an object should be fast and we need to handle modified pointers.
+The garbage collector makes use of a red-black tree implementation\cite{algorithms} to store pointers to all managed objects. It is used to determine whether a given pointer is pointing to an object managed by the garbage collector. We have two problems that need addressing: searching for an object should be fast and we need to handle modified pointers.
 
 % Describe what a modified pointer is
 A modified pointer is one which has been changed in some way. There are many ways to change a pointer but the red-black tree implementation is designed to handle the case when the pointer has been moved by a fixed offset. Figure \ref{fig:modifiedpointers} shows the case where a pointer has been modified in this way. Some modifications completely hide the pointers from the garbage collector such as the XORing of pointers. The user must be cautious of this as some data structures, notably the XOR linked list will cause problems for the garbage collector.
@@ -292,7 +292,7 @@ typedef struct {
 \end{lstlisting}
 \end{figure*}
 
-The Allocator also adds a header (Listing \ref{lst:allocatorheader}) on to allocated memory which stores associated meta-data. We need to store the size of each object so that we can reclaim the memory and we also store the index of the page containing the object for fast lookup times. The reason why we store the meta-data in this way, instead of a large data structure indexed by address, is because we do not need to maintain the data structure and this gives us faster lookup time using pointer arithmetic.
+The Allocator also adds a header (Listing \ref{lst:allocatorheader}) on to allocated memory which stores associated meta-data. It stores the size of each object so that it can reclaim the memory and it also stores the index of the page containing the object for fast lookup times. Storing meta-data in this way means that there is no large data-structure that needs to be maintained and pointer arithmetic can be used to lookup meta-data quickly.
 
 \begin{figure*}
 \begin{lstlisting}[language=C, caption=AllocatorObjH\_t structure with comments removed, label={lst:allocatorheader}]
@@ -308,7 +308,7 @@ typedef struct {
 
 Algorithm \ref{alg:allocation} demonstrates how the \emph{Allocator\_alloc} function works. \emph{Page\_allocate} (Algorithm \ref{alg:pageallocate}) will search through free areas of memory and if it finds space then it will reserve it for the object. When there is not enough memory the Allocator will attempt to reserve a new page of memory (Algorithm \ref{alg:reservepage}). The garbage collector allows for parts of the program to be manual memory managed so it takes control of heap memory only when necessary.
 
-Deallocation (Algorithm \ref{alg:deallocation}) is done by adding the memory back as a new \emph{BlockRange\_t} object. The range then gets merged with other ranges in an attempt to deal with fragmentation (\cref{sec:fragmentation}). Deallocation is made more efficient by storing the page index in the header, so that we know which page to add the range into. When an object is deallocated, the contents are invalidated by setting all the bytes to 0. This is particularly useful for evaluation as collecting a live object is more likely to result in an error.
+Deallocation (Algorithm \ref{alg:deallocation}) is performed by adding the memory back as a new \emph{BlockRange\_t} object. The range then gets merged with other ranges in an attempt to deal with fragmentation (\cref{sec:fragmentation}). Deallocation is made more efficient by storing the page index in the header, so that we know which page to add the range into. When an object is deallocated, the contents are invalidated by setting all the bytes to 0. This is particularly useful for evaluation as collecting a live object is more likely to result in an error.
 
 \begin{algorithm}
 \caption{Reserving Pages}
@@ -411,9 +411,9 @@ Deallocation (Algorithm \ref{alg:deallocation}) is done by adding the memory bac
 
 \subsection{Fragmentation} \label{sec:fragmentation}
 
-Fragmentation is a large problem when managing the heap. As it becomes more fragmented there is a greater chance that we will fail to allocate large amounts of memory successfully. We previously discussed why it is not possible to have a compaction function that deals with this.
+Fragmentation is a large problem when managing the heap. As it becomes more fragmented there is a greater chance that it will fail to allocate large amounts of memory successfully. I previously discussed why it is not possible to have a compaction function that deals with this. See \cite{fragmentation} for an overview of techniques used to deal with fragmentation.
 
-Instead my garbage collector tries to mitigate the issues of fragmentation in two ways. Firstly, when allocating memory we try to fill existing gaps in the page left behind by deallocated objects. Secondly, when memory is deallocated, the block ranges are merged together so that the largest possible ones remain.
+Instead my garbage collector tries to mitigate the issues of fragmentation in two ways. Firstly, when allocating memory it tries to fill existing gaps in the page left behind by deallocated objects. Secondly, when memory is deallocated, the block ranges are merged together so that the largest possible ones remain.
 
 Block ranges within a page have the following three invariants:
 \begin{enumerate}
@@ -422,7 +422,7 @@ Block ranges within a page have the following three invariants:
     \item It is impossible to have a range of 0 bytes.
 \end{enumerate}
 
-These properties are maintained with a function named \emph{BlockRange\_fixup}, which is called when we change the block ranges (during allocation or deallocation). The fixup algorithm can be seen in Algorithm \ref{alg:fragmentation}, this is broken down into three passes: Sorting, Merging and Removing 0s. The sorting pass uses insertion sort based on the assumption that block range lists tend to be small. The merge pass runs in linear time by walking along the list combining contiguous blocks. This pass produces 0s which are removed by the final pass, which also runs in linear time. This pass counts the number of removed blocks and updates the total count.
+These properties are maintained with a function named \emph{BlockRange\_fixup}, which is called when the the block ranges change (during allocation or deallocation). The fixup algorithm can be seen in Algorithm \ref{alg:fragmentation}, this is broken down into three passes: Sorting, Merging and Removing 0s. The sorting pass uses insertion sort based on the assumption that block range lists tend to be small. The merge pass runs in linear time by walking along the list combining contiguous blocks. This pass produces 0s which are removed by the final pass, which also runs in linear time. This pass counts the number of removed blocks and updates the total count. Merging block ranges and removing ranges of size 0 bytes is important in keeping the list small and therefore reinforces the choice of insertion sort.
 
 \begin{algorithm}
 \caption{Handling Fragmentation}
@@ -479,13 +479,13 @@ These properties are maintained with a function named \emph{BlockRange\_fixup}, 
 
 \subsection{Write Barrier} \label{sec:writebarrier}
 
-The write-barrier is a key part of the project as it allows me to meet the success criteria. The goal of the write-barrier is to report which objects have possibly been modified since the last collection. This works in conjunction with the rest of the garbage collector which remembers past objects which contain pointers to other objects in the global roots list (Listing \ref{lst:gcstruct}). Each collection the modified objects are added to the previous set if they contain pointers also.
+The write-barrier is a key part of the project as it allows me to meet the success criteria. The goal of the write-barrier is to report which objects have possibly been modified since the last collection. This works in conjunction with the rest of the garbage collector which remembers past objects that contain pointers to other objects in the global roots list (Listing \ref{lst:gcstruct}). Modified objects are checked every collection and are added to the set of older roots if they contain pointers.
 
-The write-barrier works by making parts of the reserved memory read-only, it then traps the resultant segmentation fault and marks the page object that the write corresponds to as dirty. I previously stated that the Allocator must reserve pages (Algorithm \ref{alg:reservepage}) before allocating memory within them to the program. The write-barrier uses \emph{mprotect} to set the memory permission, this function has the condition that the amount of memory being protected is a multiple of the page size. When a page is written to, a custom signal handler is executed (Algorithm \ref{alg:wbsignal}). This makes the page writable so that future writes do not cause a segmentation fault. 
+The write-barrier works by making parts of the reserved memory read-only, it then traps the resultant segmentation fault and marks the page object that the write corresponds to as dirty. I previously stated that the Allocator must reserve pages (Algorithm \ref{alg:reservepage}) before allocating memory within them to the program. The write-barrier uses \emph{mprotect} to set the memory permission, this function has the condition that the amount of memory being protected is a multiple of the page size. When a page is written to, a custom signal handler is executed (Algorithm \ref{alg:wbsignal}). This makes the page writable so that future writes do not cause a segmentation fault.
 
 The Allocator interface specifies three functions: \emph{Allocator\_dirty\_objects}, \emph{Allocator\_make\_writable} and \emph{Allocator\_clean\_all}. These are used by the collector to interact with the Allocator. Figure \ref{fig:page_lifecycle} shows how these functions affect the state of a page.
 
-The garbage collector calls \emph{Allocator\_dirty\_objects} which takes as a parameter another function. This function is called with the address of each dirty object. The garbage collector inspects each object and merges it with the current roots set if it contains pointers to other objects. During the mark phase, objects are modified which would cause a segmentation fault if the pages were left as read-only. Especially in multi-threaded programs we do not want to enter the Allocator signal handler. So before performing any marking, the garbage collector calls \emph{Allocator\_make\_writable} which sets the permissions of every page to be read and write. After garbage collection completes, it calls \emph{Allocator\_clean\_all} which marks each page as clean and sets the permissions of each to read-only.
+The garbage collector calls \emph{Allocator\_dirty\_objects} which takes another function as a parameter. This function is called with the address of each dirty object. The garbage collector inspects each object and merges it with the current roots set if it contains pointers to other objects. During the mark phase, objects are modified which would cause a segmentation fault if the pages were left as read-only. Especially in multi-threaded programs we do not want to enter the Allocator signal handler. So before performing any marking, the garbage collector calls \emph{Allocator\_make\_writable} which sets the permissions of every page to be read and write. After garbage collection completes, it calls \emph{Allocator\_clean\_all} which marks each page as clean and sets the permissions of each to read-only.
 
 When a page is initially reserved it is likely that the user will write to the allocated memory. For this reason pages start their lifecycle as dirty and only become clean for the first time after the following collection. 
 
@@ -624,7 +624,7 @@ typedef struct {
 
 \subsection{Managing Threads} \label{sec:threadsmanaging}
 
-For the garbage collector to work with multi-threaded programs, it first must know that these threads exist and know some details about each one (Listing \ref{lst:threadstruct}). As such, the first task of each garbage collected thread is to call \emph{GC\_manage\_thread}. This function simply records the frame pointer and passes this value to \emph{Threads\_add\_explicit} (Algorithm \ref{alg:threadsaddexplicit}). Mutual exclusion is used throughout where concurrent access to shared variables can occur.
+For the garbage collector to work with multi-threaded programs, it first must know that these threads exist and know some details about each one (Listing \ref{lst:threadstruct}). As such, the first task of each garbage collected thread is to call \emph{GC\_manage\_thread}. This function simply records the stack frame pointer and passes this value to \emph{Threads\_add\_explicit} (Algorithm \ref{alg:threadsaddexplicit}). Mutual exclusion is used throughout where concurrent access to shared variables can occur.
 
 \begin{algorithm}
 \caption{Recording Threads}
@@ -755,7 +755,7 @@ Finally, the collecting thread signals completion and waits for all other thread
 
 \subsection{Limits} \label{sec:threadslimits}
 
-My garbage collector uses pthreads and therefore other threading models will not be thread-safe. Also Windows machines do not have native support for pthreads and therefore require an extension for this implementation to work correctly.
+My garbage collector uses pthreads and therefore other threading models will not be thread-safe. Also Windows machines do not have native support for pthreads and therefore requires an extension for this implementation to work correctly.
 
 \section{Garbage Collection} \label{sec:garbagecollection}
 
@@ -835,9 +835,9 @@ It is crucial to the project that we can find pointers from the root set as well
 
 \subsubsection{Stack Pointers}
 \label{sec:stackroots}
-To search for pointers we need to have the start and end address of each stack. To do this the garbage collector uses the function \emph{\_\_builtin\_frame\_address(0)} which returns the address of the current stack frame. As discussed in \cref{sec:threadsmanaging}, \emph{GC\_manage\_thread} will record one endpoint when called. When collecting we call this function again and search between these two pointers. This uses the assumption that the signal handler stack frame is added to the normal stack instead of a special purpose one, which may not always be true depending on the platform.
+To search for pointers it keeps track of the start and end addresses of each stack using the function \emph{\_\_builtin\_frame\_address(0)} which returns the address of the current stack frame. As discussed in \cref{sec:threadsmanaging}, \emph{GC\_manage\_thread} will record one endpoint when called. When collecting we call this function again and search between these two pointers. This uses the assumption that the signal handler stack frame is added to the normal stack instead of a special purpose one, which may not always be true depending on the platform.
 
-The \emph{add\_stack\_roots} function (Algorithm \ref{alg:stackroots}), uses the assumption that pointers have to be aligned on a boundary greater than or equal to the size of a pointer. It treats the entire stack as being an \emph{intptr\_t} pointer and then performs pointer arithmetic to get the values of potential references. I previously mentioned that we are using a conservative approach and therefore will get values which are in actual fact not pointers. When considering a possible pointer from the stack, it checks that it is a managed reference, this only gets added to the output list if it points to an object in a generation being collected. Objects which are not being considered for collection are ignored because if they do contain pointers they will be added when we consider older roots.
+The \emph{add\_stack\_roots} function (Algorithm \ref{alg:stackroots}), uses the assumption that pointers have to be aligned on a boundary greater than or equal to the size of a pointer. It treats the entire stack as being an \emph{intptr\_t} pointer and then performs pointer arithmetic to get the values of potential references. I previously mentioned that we are using a conservative approach and therefore will get values which are in actual fact not pointers. When considering a possible pointer from the stack, it checks that it is a managed reference by performing a search in the red-black tree, this only gets added to the output list if it points to an object in a generation being collected. Objects which are not being considered for collection are ignored because if they do contain pointers they will be added when we consider older roots.
 
 \begin{algorithm}
 \caption{Finding Stack Roots}
@@ -869,16 +869,16 @@ The \emph{add\_stack\_roots} function (Algorithm \ref{alg:stackroots}), uses the
 \subsubsection{Register Pointers}
 Registers can contain pointers to heap objects which may not be on the stack. The user program could choose to keep certain pointers in registers for faster access. It is important to note that compiling with no optimisation may cause every pointer to be placed on the stack but this could possibly damage performance. 
 
-We can reuse our existing stack searching code to also include registers by using the function \emph{setjmp}. \emph{setjmp} saves the current state required to restore program execution at that point, this includes saving any preserved register values. These values are stored on the stack in a platform-specific structure.
+I reused the existing stack searching code to also include registers by using the function \emph{setjmp}. \emph{setjmp} saves the current state required to restore program execution at that point, this includes saving any preserved register values. These values are stored on the stack in a platform-specific structure.
 
 \subsubsection{Older Roots}
 
-Finally, we require older roots to be able to safely find all reachable objects and thus remove garbage with confidence. The Allocator tracks all objects which have been potentially modified since the last collection. These objects are merged into the set of objects which were previously shown to definitely contain pointers to other managed objects. The complete set of older roots is stored within the \emph{roots} property of the \emph{GC} structure. Objects which did not contain any pointers during the collection or those which have become garbage are removed from the list. This process requires methods: \emph{inspect\_dirty}, which adds the dirty objects to the older roots list, \emph{add\_older\_roots}, which adds pointers from the older roots to the root list and as a side-effect removes objects which did not contain relevant pointers, and \emph{remove\_garbage\_roots}, which removes any roots which became garbage from the older roots list. We can remove garbage roots by checking which are not marked, between the mark and collect phases.
+Finally, it must find older roots to be able to safely find all reachable objects and thus remove garbage with confidence. The Allocator tracks all objects which have been potentially modified since the last collection. These objects are merged into the set of objects which were previously shown to definitely contain pointers to other managed objects. The complete set of older roots is stored within the \emph{roots} property of the \emph{GC} structure. Objects which did not contain any pointers during the collection or those which have become garbage are removed from the list. This process requires methods: \emph{inspect\_dirty}, which adds the dirty objects to the older roots list, \emph{add\_older\_roots}, which adds pointers from the older roots to the root list and as a side-effect removes objects which did not contain relevant pointers, and \emph{remove\_garbage\_roots}, which removes any roots which became garbage from the older roots list. We can remove garbage roots by checking which are not marked, between the mark and collect phases.
 
 \subsection{Mark Phase}
 \label{sec:markphase}
 
-Following the mark phase (Algorithm \ref{alg:markphase}), every object which is reachable from the root set that is within our collecting generations will have the marked flag set to 1. We compute the list of starting points from the root set and older objects. From here we search each non-atomic object for pointers and follow them repeatedly, marking everything we encounter. Finding pointers within an object uses the \emph{add\_object\_pointers} function which searches between the start and end bounds, using the conservative assumption, adding any managed pointers.
+Following the mark phase (Algorithm \ref{alg:markphase}), every object which is reachable from the root set that is within our collecting generations will have the marked flag set to 1. It computes the list of starting points from the root set and older objects. From here it searches each non-atomic object for pointers and follows them repeatedly, marking everything it encounters. Finding pointers within an object uses the \emph{add\_object\_pointers} function which searches between the start and end bounds, using the conservative assumption, adding any managed pointers.
 
 \begin{algorithm}
 \caption{Marking reachable objects}
@@ -907,7 +907,7 @@ Following the mark phase (Algorithm \ref{alg:markphase}), every object which is 
 
 % How we maintain the Generations, how we promote and free memory and do this safely.
 
-The collection phase occurs after all the threads have concurrently marked their reachable sets. While this occurs, all other managed threads will wait for this to complete. We perform a fixup operation (Algorithm \ref{alg:collectphase}) on each generation which promotes marked objects and removed unmarked ones. It also sets the marked flag to 0 for each promoted object. The ordering of the fixup operations is very important. I fixup each generation starting at the oldest and ending at the youngest. This allows us to do a single pass over all generations instead of separate promotion, collection and unmarking phases.
+The collection phase occurs after all the threads have concurrently marked their reachable sets. While this occurs, all other managed threads will wait for this to complete. It performs a fixup operation (Algorithm \ref{alg:collectphase}) on each generation which promotes marked objects and removed unmarked ones. It also sets the marked flag to 0 for each promoted object. The ordering of the fixup operations is very important. It fixes each generation starting at the oldest and ending at the youngest. This allows the collector to perform a single pass over all generations instead of separate promotion, collection and unmarking phases.
 
 \begin{algorithm}
 \caption{Fixing Up Generations}
@@ -942,8 +942,8 @@ In this section I will discuss what the Logger module is and why it is needed as
 
 The logger module (Listing \ref{lst:logger}) allows the garbage collector to write runtime statistics to a file. This file can be imported into the Matlab scripts produced for evaluation. The logger module defines a single structure, \emph{logger\_t}, which encapsulates the output file descriptor.
 
-The open method simple opens the file where we write the output and writes the headers which are used as labels in the final graphs. The close method simply closes the file descriptor. The tick method is the most important, this writes a row to the output. logger\_tick is be called from within \emph{GC\_malloc} every time an object is allocated. 
-I use the number of allocations on the x-axis in the graphs in the evaluation chapter as a substitute for time. The reason for this is that time can give misleading graphs which are harder to make conclusions from. One of the main success criteria was that \emph{'the garbage collector should run when when the number of objects in a generation passes a threshold [...]'}. It is more difficult to make conclusions about the behaviour of the garbage collector from time-based graphs. To do this I need to know the exact memory behaviour of the program in question. With an allocation-based graph it is much simpler, if there is some amount of garbage each collection and if I know the threshold value, then observing that the number of live objects decreases at every x value that is a multiple of the threshold I can conclude that the garbage collector meets the criterion. 
+The open method simply opens the output file and writes the headers which are used as labels in the final graphs. The close method closes the file descriptor. The tick method is the most important, this writes a single row to the output. logger\_tick is be called from within \emph{GC\_malloc} every time an object is allocated. 
+I use the number of allocations on the x-axis in the graphs in the evaluation chapter as a substitute for time. The reason for this is that time can give misleading graphs which are harder to make conclusions from. One of the main success criteria is that \emph{`the garbage collector should run when when the number of objects in a generation passes a threshold [...]'}. It is more difficult to make conclusions about the behaviour of the garbage collector from time-based graphs. To do this I need to know the exact memory behaviour of the program in question. With an allocation-based graph it is much simpler, if there is some amount of garbage each collection and if I know the threshold value, then observing that the number of live objects decreases at every x value that is a multiple of the threshold I can conclude that the garbage collector meets the criterion. 
 
 Listing \ref{lst:logger_res} shows and example output, the live objects column could be changed for a different statistic or extended to have multiple columns.
 
@@ -993,6 +993,6 @@ A limitation of the garbage collector is that it finds pointers to objects in un
 
 \section{Summary}
 
-In this chapter we have seen the implementation of each of the components of my garbage collector and how they work together to make the final solution. We have seen how the Allocator manages the program's memory and maintains object meta-data which is used by the garbage collector. Garbage collection details such as root finding, tracing and freeing garbage have all been discussed with pseudo-code given for the important functions. Finally, the multi-threaded extension has been discussed including how signal handlers have been used to implement a stop-the-world garbage collector. In the next section I will demonstrate that this implementation has been successful through unit testing and the analysis of custom benchmarks.
+In this chapter I have discussed the implementation of each of the components of my garbage collector and how they work together to make the final solution. I have demonstrated how the Allocator manages the program's memory, maintains object meta-data which is used by the garbage collector and implements a write-barrier. Garbage collection details such as root finding, tracing and freeing garbage have all been discussed with pseudo-code given for the important functions. Finally, the multi-threaded extension has been discussed including how signal handlers have been used to implement a stop-the-world garbage collector. In the next section I will demonstrate that this implementation has been successful through unit testing and the analysis of custom benchmarks.
 
 \end{document}
