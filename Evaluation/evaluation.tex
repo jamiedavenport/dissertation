@@ -12,7 +12,7 @@ The success criteria were first outlined in the project proposal (Appendix \ref{
 
 \begin{enumerate}
     \item Produce a garbage collector which never collects a live object.
-    \item The garbage collector should run when when the number of objects in a generation passes a threshold or when malloc returns NULL indicating that there isn't enough space on the heap.
+    \item The garbage collector should run when the number of objects in a generation passes a threshold or when malloc returns NULL indicating that there isn't enough space on the heap.
     \item  It should collect at least 90\% of garbage each time it is run.
 \end{enumerate}
  
@@ -35,6 +35,8 @@ The unit tests use Catch's BDD-style specification which is useful to clearly se
 
 \section{Benchmarks} \label{sec:benchmarks}
 
+In this section I measure the amount of garbage that is recycled for single and multi-threaded programs. From this evidence I will conclude that the garbage collector has met the success criteria.
+
 I produced two benchmarks that demonstrate key features of the garbage collector. As well as using the two benchmarks I also evaluated against multi-threaded versions of the benchmarks in which the same task is running over many threads. These benchmarks are also unit tested for correctness and their memory statistics are recorded for evaluation. When deallocating memory, the contents are invalidated and set to all 0s. This destroys the original contents of the allocated memory making it likely that freeing a live object will cause an error.
 
 There is a consistent naming convention used throughout the evaluation, benchmarks take the form [Name][$N$]($x$), where Name is the name of the benchmark, $N$ is the number of threads it uses and $x$ is the input.
@@ -43,7 +45,7 @@ There is a consistent naming convention used throughout the evaluation, benchmar
 
 This benchmark attempts to produce Fibonacci numbers using a naive method. It uses recursion and allocates a new integer for each temporary number. This is clearly not a very good example of real-world programs but it allows me to demonstrate that the garbage collector is running and that it collects at least 90\% of garbage. This benchmark allocates memory which dies very quickly and therefore is good for demonstrating generational algorithm properties. As well as the single-threaded version, I use a multi-threaded version which attempts to compute many Fibonacci numbers at once on 8 threads.
 
-Figure \ref{fig:fib1graph} displays the results for running the single threaded benchmark with a threshold of 200 allocations and calculates the 20th Fibonacci number. From this we can see that garbage is being collected and that the collector is running frequently every 200 allocations. The benchmark completes with the result of 6765 which is the correct result. Table \ref{tab:fib1stats} shows the garbage collector statistics on completion. From these statistics we can see that 98\% of garbage was collected. With longer running tests such as calculating the 30th Fibonacci number, we get 99.99\% of garbage collected although the graphs produced by these are very compact because of the amount of data. With short running programs which do not allocate as much memory, it is possible to get relatively low collection rates. For example computing the 10th Fibonacci number with a threshold of 10 objects gives us a collection rate of 73.4\% ($=80/109$). It is important to note that one object should be live because it contains the result. When I force a garbage collection before the program exits the collection rate improves to 91.7\% and when I force 3 garbage collections (so that ever generation has been scanned for garbage) the rate increases to 98.2\%.
+Figure \ref{fig:fib1graph} displays the results for running the single threaded benchmark with a threshold of 200 allocations and calculates the 20th Fibonacci number. From this we can see that garbage is being collected and that the collector is running frequently every 200 allocations. The benchmark completes with the result of 6765 which is the correct result. Table \ref{tab:fib1stats} shows the garbage collector statistics on completion. From these statistics we can see that 98\% of garbage was collected. With longer running tests such as calculating the 30th Fibonacci number, we get 99.99\% of garbage collected although the graphs produced by these are very compact because of the amount of data. With short running programs which do not allocate as much memory, it is possible to get relatively low collection rates. For example computing the 10th Fibonacci number with a threshold of 10 objects gives us a collection rate of 73.4\% ($=80/109$). It is important to note that one object should be live because it contains the result. When I force a garbage collection before the program exits the collection rate improves to 91.7\% and when I force 3 garbage collections (so that every generation has been scanned for garbage) the rate increases to 98.2\%.
 
 \begin{figure}
     \centering
@@ -144,7 +146,7 @@ The multi-threaded version simply produces 4 trees of height 16 over 4 different
 
 \section{Performance Evaluation}
 
-In this section I will discuss the performance of the garbage collector. Despite not being a main success criteria it is important to discuss the performance, as even in situations where performance is not critical we still want to have minimal slowdown. All benchmarks are compiled with no optimisation to give worst-case values of performance.
+In this section I will discuss how the threshold value impacts performance and how the overall performance (using the optimal parameters) compares with manual memory management. Despite not being a main success criterion it is important to discuss the impact on performance, as even in situations where this is not critical we still want to have minimal slowdown. All benchmarks are compiled with no optimisation to give worst-case runtime values.
 
 \subsection{Variation with Threshold} \label{sec:variationwiththreshold}
 
@@ -252,6 +254,6 @@ When using the garbage collector, the programmer can improve performance by comb
 
 \section{Summary}
 
-In this chapter, I have provided evidence that the main success criteria have been met. This was achieved using two benchmarks which collectively display the robustness of the garbage collector, as well as multi-threaded versions which demonstrate that it's thread-safe. I have also discussed the performance of the garbage collector, showing how parameters can be changed to alter performance and how the memory characteristics of the program can have a large impact on the performance. These lead us to think differently about how C programs with garbage collection can be designed to minimise the performance hit.
+In this chapter, I have provided evidence that the main success criteria have been met. This was achieved using two benchmarks which collectively display the robustness of the garbage collector, as well as multi-threaded versions which demonstrate that it's thread-safe. I have also discussed the performance of the garbage collector, showing how parameters can be changed to alter performance and how the memory characteristics of the program can have a large impact on the performance. These leads us to think differently about how C programs with garbage collection can be designed to minimise the performance hit.
 
 \end{document}

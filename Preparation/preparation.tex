@@ -43,7 +43,7 @@ My project uses the generational garbage collection algorithm\cite{generational}
 
 The generational algorithm works by segregating the heap into generations, which contain objects of similar age. When collecting, the garbage collector will check younger generations more frequently than older ones. If an object survives collection it is promoted into the next generation (unless already in the oldest generation). Sometimes, different collection algorithms are used on the new and old generations. A common scenario for a garbage collector with $N$ generations is to use a copy collector for the youngest $N-1$ generations and mark and sweep for the oldest one. The reason for this is that copy collection gives us the promotion step and defragmentation without any extra processing.
 
-The benefit of the generational algorithm is that each collection should be faster as the number of objects it has to consider is lower when compared to a mark and sweep garbage collector. In the latter, this can lead to a visible pause which is undesirable. There are limits to the generational algorithm, in particular it is not always comprehensive (it may fail to collect all the garbage). An example of this can be seen in Figure \ref{fig:generational} where an object is referenced by an older object which itself is garbage. When not collecting older objects they are treated as live. This does not mean that garbage left behind after one collection will not be collected in another.
+The benefit of the generational algorithm is that each collection should be faster as the number of objects it has to consider is lower when compared to a mark and sweep garbage collector. In the latter this can lead to a visible pause which is undesirable. There are limits to the generational algorithm, in particular it is not always comprehensive (it may fail to collect all the garbage). An example of this can be seen in Figure \ref{fig:generational} where an object is referenced by an older object which itself is garbage. When not collecting older objects they are treated as live. This does not mean that garbage left behind after one collection will not be collected in another.
 
 \begin{figure}
     \centering
@@ -60,7 +60,7 @@ One way of implementing a write-barrier is to insert a small thunk before every 
 
 \subsection{Conservative Collection} \label{lab:conservative}
 
-Conservative collection\cite{conservative} is useful for adding garbage collection to a programming language which never intended to have it as a feature. When we are in an environment where it is not possible to know which values are references, we make the conservative decision to threat any value which \emph{might} be a pointer as a reference. Figure \ref{fig:conservative} shows an example of this conservative decision. The drawback of this approach is that we may find a value which looks like a pointer to an object but in actual fact it was just a numerical value. It is not possible to implement a full copying collector that is conservative. A copying collector moves the objects to new locations which requires updating the references to them, but we do not know for sure that the value was a pointer thus the update operation is not safe. Another implication of this is that we cannot perform compaction to remove fragmentation for the same reasons.
+Conservative collection\cite{conservative} is useful for adding garbage collection to a programming language which never intended to have it as a feature. When we are in an environment where it is not possible to know which values are references, we make the conservative decision to treat any value which \emph{might} be a pointer as a reference. Figure \ref{fig:conservative} shows an example of this conservative decision. The drawback of this approach is that we may find a value which looks like a pointer to an object but in actual fact it was just a numerical value. It is not possible to implement a full copying collector that is conservative. A copying collector moves the objects to new locations which requires updating the references to them, but we do not know for sure that the value was a pointer thus the update operation is not safe. Another implication of this is that we cannot perform compaction to remove fragmentation for the same reasons.
 
 \begin{figure}
     \centering
@@ -89,13 +89,13 @@ Having looked at the basics of generational and conservative collection, we can 
 
 It is important that the main program be able to allocate memory. For garbage collection to work as expected it needed to know what objects have previously been allocated and contain some meta-data for each one. This ties into the first success criterion: \emph{``produce a garbage collector which never collects a live object''}. Efficient data-structures were implemented to contain the required information to give the best possible performance. Another implication of the first success criterion is that it needed a method of finding objects with pointers to other objects. To achieve this I implemented a write-barrier which tracks writes to the allocated objects and therefore allows the garbage collector to inspect the contents for pointers. These requirements were of high priority due to the close relation to the success criteria.
 
-Fragmentation was also a concern for long-running programs, I previously stated that an explicit compaction step is not possible in a conservative collector. This was a low priority requirement because machines with sufficient memory can tolerate small amounts of fragmentation.
+Fragmentation was also a concern for long-running programs, I previously stated that an explicit compaction step is not possible in a conservative collector. This was a low priority requirement because machines with sufficient memory can tolerate significant amounts of fragmentation.
 
 \subsubsection{Collection}
 
 To be able to perform a collection, the garbage collector needed to identify pointers from the root set. Global roots were not considered although it is mentioned in the future work section (\cref{sec:futurework}).
 
-The second success criterion states that \emph{``the garbage collector should run when when the number of objects in a generation passes a threshold [...]''}. To achieve this the garbage collector had to store runtime statistics so that it can determine when to run. These statistics were also used in the evaluation section of this dissertation.
+The second success criterion states that \emph{``the garbage collector should run when the number of objects in a generation passes a threshold [...]''}. To achieve this the garbage collector had to store runtime statistics so that it can determine when to run. These statistics were also used in the evaluation section of this dissertation.
 
 \subsubsection{Multi-threading}
 
@@ -125,7 +125,7 @@ To be able to coordinate the collection (recall that it uses a stop-the-world ap
 
 In this section I will discuss my development environment and the tools which I used to develop my garbage collector. I am using a MacBook Pro with an Intel Core i7 processor clocked at 2.5GHz, running High Sierra (version 10.13.1). It is important to note the development platform as results in different environments may differ.
 
-Naturally, C was chosen as my primary programming language and C++ for writing my unit tests. C++ is used because so that I can make use of C++ testing frameworks. The testing framework of choice was Catch since this is a header-only framework which is simple to use while being very powerful. 
+Naturally, C was chosen as my primary programming language and C++ for writing my unit tests. C++ is used so that I can make use of C++ testing frameworks. The testing framework of choice was Catch since this is a header-only framework which is simple to use while being very powerful. 
 
 I used Git for revision control which is of key importance for large projects. I used BitBucket for hosting which also acts as my primary backup. At the end of every week I also created a copy of the progress to a memory pen. Matlab and LaTeX are also used to produce graphs for evaluation and for producing the corresponding documentation respectively.
 

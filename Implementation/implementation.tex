@@ -10,7 +10,7 @@
 
 \begin{document}
 
-This chapter will explore how the design and requirements from the previous chapter were achieved. It is discussed in seven sections: structure \& interface (\cref{sec:structureandinterface}), data structures (\cref{sec:datastructures}), the Allocator (\cref{sec:allocator}), allocating memory (\cref{sec:gcmalloc}), the Threads module (\cref{sec:threads}), garbage collection (\cref{sec:garbagecollection}), logging (\cref{sec:logger}) and implementation issues (\cref{sec:implementationissues}).
+This chapter will explore how the design and requirements from the previous chapter were achieved. It is discussed in eight sections: structure \& interface (\cref{sec:structureandinterface}), data structures (\cref{sec:datastructures}), the Allocator (\cref{sec:allocator}), allocating memory (\cref{sec:gcmalloc}), the Threads module (\cref{sec:threads}), garbage collection (\cref{sec:garbagecollection}), logging (\cref{sec:logger}) and implementation issues (\cref{sec:implementationissues}).
 
 \section{Structure \& Interface}
 \label{sec:structureandinterface}
@@ -649,7 +649,7 @@ For the garbage collector to work with multi-threaded programs, it first must kn
 
 This approach allows the programmer to define managed and unmanaged threads, where the unmanaged threads use manual memory management. This may be useful when the programmer knows in advance that a particular thread will not require automatic memory management features. The garbage collector will not pause execution of unmanaged threads thus the performance of these will be better when compared to the managed version.
 
-When threads complete they must be removed from the list. Otherwise the list would only ever expand and cause a memory leak. The module uses \emph{pthread\_kill} to signal each thread at the start of a collection, this function returns a specific error code if the thread has finished. By checking the error code, it can determine whether or not a thread has finished and if so it can remove the the thread from the list. 
+When threads complete they must be removed from the list. Otherwise the list would only ever expand and cause a memory leak. The module uses \emph{pthread\_kill} to signal each thread at the start of a collection, this function returns a specific error code if the thread has finished. By checking the error code, it can determine whether or not a thread has finished and if so it can remove the thread from the list. 
 
 \subsection{Signalling Threads} \label{sec:signallingthreads}
 
@@ -907,7 +907,7 @@ Following the mark phase (Algorithm \ref{alg:markphase}), every object which is 
 
 % How we maintain the Generations, how we promote and free memory and do this safely.
 
-The collection phase occurs after all the threads have concurrently marked their reachable sets. While this occurs, all other managed threads will wait for this to complete. It performs a fixup operation (Algorithm \ref{alg:collectphase}) on each generation which promotes marked objects and removed unmarked ones. It also sets the marked flag to 0 for each promoted object. The ordering of the fixup operations is very important. It fixes each generation starting at the oldest and ending at the youngest. This allows the collector to perform a single pass over all generations instead of separate promotion, collection and unmarking phases.
+The collection phase occurs after all the threads have concurrently marked their reachable sets. While this occurs, all other managed threads will wait for this to complete. It performs a fixup operation (Algorithm \ref{alg:collectphase}) on each generation which promotes marked objects and removes unmarked ones. It also sets the marked flag to 0 for each promoted object. The ordering of the fixup operations is very important. It fixes each generation starting at the oldest and ending at the youngest. This allows the collector to perform a single pass over all generations instead of separate promotion, collection and unmarking phases.
 
 \begin{algorithm}
 \caption{Fixing Up Generations}
@@ -942,10 +942,10 @@ In this section I will discuss what the Logger module is and why it is needed as
 
 The logger module (Listing \ref{lst:logger}) allows the garbage collector to write runtime statistics to a file. This file can be imported into the Matlab scripts (Appendix \ref{appendix:evaluation}) produced for evaluation. The logger module defines a single structure, \emph{logger\_t}, which encapsulates the output file descriptor.
 
-The open method simply opens the output file and writes the headers which are used as labels in the final graphs. The close method closes the file descriptor. The tick method is the most important, this writes a single row to the output. logger\_tick is be called from within \emph{GC\_malloc} every time an object is allocated. 
+The open method simply opens the output file and writes the headers which are used as labels in the final graphs. The close method closes the file descriptor. The tick method is the most important, this writes a single row to the output. \emph{logger\_tick} is called from within \emph{GC\_malloc} every time an object is allocated. 
 I use the number of allocations on the x-axis in the graphs in the evaluation chapter as a substitute for time. The reason for this is that time can give misleading graphs which are harder to make conclusions from. One of the main success criteria is that \emph{`the garbage collector should run when when the number of objects in a generation passes a threshold [...]'}. It is more difficult to make conclusions about the behaviour of the garbage collector from time-based graphs. To do this I need to know the exact memory behaviour of the program in question. With an allocation-based graph it is much simpler, if there is some amount of garbage each collection and if I know the threshold value, then observing that the number of live objects decreases at every x value that is a multiple of the threshold I can conclude that the garbage collector meets the criterion. 
 
-Listing \ref{lst:logger_res} shows and example output, the live objects column could be changed for a different statistic or extended to have multiple columns.
+Listing \ref{lst:logger_res} shows an example output, the live objects column could be changed for a different statistic or extended to have multiple columns.
 
 \begin{figure*}
 \begin{lstlisting}[language=C, caption=Logger interface, label={lst:logger}]

@@ -82,12 +82,13 @@ Name:               & \bf Jamie Davenport                       \\
 College:            & \bf Trinity College                     \\
 Project Title:      & \bf Generational Garbage Collection in C \\
 Examination:        & \bf Computer Science Tripos -- Part II, July 2018  \\
-Approx. Word Count:         & \bf 11,653  \\
+Approx. Word Count:         & \bf 11,653\footnotemark  \\
 Project Originator: & Dr Timothy Jones                    \\
 Supervisor:         & Dr Timothy Jones                    \\ 
 \end{tabular}
 }
 
+\footnotetext{Calculated using TeXcount}
 
 \section*{Original Aims of the Project}
 
@@ -170,7 +171,7 @@ Here I will provide some of the code used as part of the evaluation including be
 
 \section{Benchmark Code}
 
-Listings \ref{lst:benchfibcode} and \ref{lst:benchtreescode} show the source code for both benchmarks, they include header files which contain the function declarations. These functions are used to construct the single and multi-threaded benchmarks which are presented in the evaluation. The garbage collector can be disabled by commenting out the include statement, by doing this it will use manual memory management.
+Listings \ref{lst:benchfibcode} and \ref{lst:benchtreescode} show the source code for both benchmarks, they include header files which contain the function declarations. These functions are used to construct the single and multi-threaded benchmarks that are presented in the evaluation. The garbage collector can be disabled by commenting out the include statement, by doing this it will use manual memory management.
 
 \begin{figure*}
 \begin{lstlisting}[language=C, caption=Fibonacci benchmark source code, label={lst:benchfibcode}]
@@ -329,7 +330,7 @@ clearvars filename delimiter startRow formatSpec fileID dataArray ans;
 \end{figure*}
 
 \begin{figure*}
-\begin{lstlisting}[language=Matlab, caption=Matlab script for Fib runtime graph w.r.t. threshold, label={lst:fibbenchthresh}]
+\begin{lstlisting}[language=Matlab, caption=Matlab script for Fib runtime graph w.r.t.~threshold, label={lst:fibbenchthresh}]
 x = [500:500:5000];
 
 y = [0.01632733333
@@ -372,7 +373,7 @@ Fib_1(20) varies with threshold');
 \end{figure*}
 
 \begin{figure*}
-\begin{lstlisting}[language=Matlab, caption=Matlab script for Trees runtime graph w.r.t. threshold, label={lst:treesbenchthresh}]
+\begin{lstlisting}[language=Matlab, caption=Matlab script for Trees runtime graph w.r.t.~threshold, label={lst:treesbenchthresh}]
 x = [500:500:8000];
 
 y = [2.123795
